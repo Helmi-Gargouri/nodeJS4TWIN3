@@ -11,36 +11,6 @@ function socketIO (server) {
     return io ;
 } */
 
-// Socket.IO 
-function socketIO (server) {
-
-io.on("connection", (socket) => {
-    console.log("A user connected");
-  
-    // Real-time search by category
-    socket.on("search categorie", async (query) => {
-      if (!query.trim()) {
-        socket.emit("search results", []); // Send empty results for empty queries
-        return;
-      }
-  
-      try {
-        const Ordinateur = require("./models/Ordinateur");
-        const results = await Ordinateur.find({
-          categorie: new RegExp(query, "i"), // Case-insensitive partial match
-        });
-        socket.emit("search results", results); // Send results back to the client
-      } catch (error) {
-        console.error("Error during search:", error.message);
-      }
-    });
-  
-    // Notify when a user disconnects
-    socket.on("disconnect", () => {
-      console.log("A user disconnected");
-    });
-  });
-}    
 
 async function list(req,res,next){
     await Ordinateur.find()
@@ -112,5 +82,38 @@ const searchByPriceRange = async (req, res) => {
 function ordinateurView(req, res, next) {
     res.render('ordinateur');
 }
+
+
+
+const socketIO = (server) => {
+  const io = socketIo(server);
+
+
+  io.on('connection', (socket) => {
+      console.log('User connected via Socket.IO');
+
+      socket.on('display-ord', async (categorie) => {
+                  try {
+                      let ords;
+                      if (categorie) {
+                          ords = await ordinateurModel.find({ categorie });
+                          console.log(`Data found for category "${categorie}":`, ords);
+                      } else {
+                     
+                          ords = await ordinateurModel.find();
+                          console.log('All data:', ords);
+                      }
+                      io.emit('ordList', ords); 
+                  } catch (error) {
+                      console.error('Error fetching data:', error.message);
+                      io.emit('error', { message: 'Failed to fetch data' }); 
+                  }
+       });
+
+  });
+
+  return io;
+}
+
 module.exports = { create, list, update, deleteU,searchByPriceRange,socketIO,ordinateurView}
 
